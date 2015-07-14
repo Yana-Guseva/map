@@ -2,20 +2,20 @@ package com.example.yana.mybrowser;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.Resources;
-import android.graphics.Color;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import com.example.yana.mybrowser.util.DownloadReciver;
+import com.example.yana.mybrowser.util.DwnloadService;
 import com.example.yana.mybrowser.util.Util;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -25,9 +25,6 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
 
 
 public class MainActivity extends ActionBarActivity implements OnMapReadyCallback, LocationListener {
@@ -37,11 +34,10 @@ public class MainActivity extends ActionBarActivity implements OnMapReadyCallbac
     LocationManager locationManager;
     String provider;
     Circle mCircle;
-    Marker mMarker;
     private static final long MIN_TIME = 10;
     private static final float MIN_DISTANCE = 100;
     final String TAG = "myLogs";
-    final int radius = 1000; //metres
+    final int metresInKiilometres = 1000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,53 +58,48 @@ public class MainActivity extends ActionBarActivity implements OnMapReadyCallbac
         Location lastKnownLocation = locationManager.getLastKnownLocation(provider);
         if(lastKnownLocation != null) {
             LatLng latLng = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
-            //map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
             locationManager.removeUpdates(this);
         }
 
-//        GoogleMap.OnMyLocationChangeListener locationListener = new GoogleMap.OnMyLocationChangeListener() {
-//            @Override
-//            public void onMyLocationChange(Location location) {
-//                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-//                map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
-//                map.addMarker(new MarkerOptions()
-//                        .title("You")
-//                        .snippet("You are here.")
-//                        .position(latLng));
-//            }
-//        };
-
-//        map.setOnMyLocationChangeListener(locationListener);
-
             map.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
-            @Override
-            public void onMyLocationChange(Location location) {
-                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                if(mCircle == null || mMarker == null){
-                    drawMarkerWithCircle(latLng);
-                }else{
-                    updateMarkerWithCircle(latLng);
+                @Override
+                public void onMyLocationChange(Location location) {
+                    LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    if (mCircle == null) {
+                        drawCircle(latLng);
+                    } else {
+                        updateCircle(latLng);
+                    }
                 }
-            }
-        });
+            });
         mapFragment.getMapAsync(this);
+        Intent intent = new Intent(this, DwnloadService.class);
+        DownloadReciver reciver = new DownloadReciver(new Handler());
+        reciver.setActivity(this);
+        intent.putExtra(DwnloadService.RECIVER, reciver);
+        startService(intent);
     }
 
-    private void updateMarkerWithCircle(LatLng position) {
+    private void updateCircleRadius(Circle circle, int radius) {
+        circle.setRadius(radius);
+    }
+
+    private void updateCircle(LatLng position) {
         mCircle.setCenter(position);
-        mMarker.setPosition(position);
     }
 
-    private void drawMarkerWithCircle(LatLng position){
-        double radiusInMeters = radius;
-        int strokeColor = 0xffff0000; //red outline
-        int shadeColor = 0x44ff0000; //opaque red fill
+    private void drawCircle(LatLng position){
+        double radiusInMeters = Util.getRadius(this) * metresInKiilometres;
+        int strokeColor = 0xffff7f50; //outline
+        int shadeColor = 0x44ff7f50; //opaque fill
 
-        CircleOptions circleOptions = new CircleOptions().center(position).radius(radiusInMeters).fillColor(shadeColor).strokeColor(strokeColor).strokeWidth(1);
+        CircleOptions circleOptions = new CircleOptions()
+                .center(position)
+                .radius(radiusInMeters)
+                .fillColor(shadeColor)
+                .strokeColor(strokeColor)
+                .strokeWidth(1);
         mCircle = map.addCircle(circleOptions);
-
-        MarkerOptions markerOptions = new MarkerOptions().position(position);
-        mMarker = map.addMarker(markerOptions);
     }
 
     @Override
@@ -117,11 +108,19 @@ public class MainActivity extends ActionBarActivity implements OnMapReadyCallbac
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME, MIN_DISTANCE, this);
         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, MIN_TIME, MIN_DISTANCE, this);
         //Toast.makeText(this, "Selected Provider " + provider, Toast.LENGTH_SHORT).show();
-        int zoom = calculateZoomLevel(getWindow().getWindowManager().getDefaultDisplay().getWidth(), radius);
-        CameraUpdate z = CameraUpdateFactory.zoomTo(zoom);
+
+        CameraUpdate z = CameraUpdateFactory.zoomTo(getZoomLevel(Util.getRadius(this) * metresInKiilometres));
         map.moveCamera(z);
-        Log.d("LOG", "" + Util.getRadius(this));
-        //map.animateCamera(z);
+
+        if(mCircle != null) {
+            updateCircleRadius(mCircle, Util.getRadius(this) * metresInKiilometres);
+        }
+    }
+
+    private float getZoomLevel(int radius) {
+        double scale = radius/500;
+        float zoomLevel = (float) (16 - Math.log(scale)/Math.log(2));
+        return --zoomLevel;
     }
 
     @Override
@@ -155,30 +154,16 @@ public class MainActivity extends ActionBarActivity implements OnMapReadyCallbac
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        LatLng sydney = new LatLng(-33.867, 151.206);
         map.setMyLocationEnabled(true);
-        map.addMarker(new MarkerOptions()
-                .title("Sydney")
-                .snippet("The most populous city in Australia.")
-                .position(sydney));
     }
 
     @Override
     public void onLocationChanged(Location location) {
         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-//        map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 13));
-        map.addMarker(new MarkerOptions()
-                .title("You")
-                .snippet("You are here.")
-                .position(latLng));
-
-
         map.animateCamera(CameraUpdateFactory.newLatLng(latLng));
         CameraUpdate center = CameraUpdateFactory
                 .newLatLng(latLng);
-//        CameraUpdate zoom = CameraUpdateFactory.zoomTo(15);
         map.moveCamera(center);
-//        map.animateCamera(zoom);
     }
 
     @Override
@@ -196,18 +181,7 @@ public class MainActivity extends ActionBarActivity implements OnMapReadyCallbac
         Log.d(TAG, "disable " + provider);
     }
 
-    private int calculateZoomLevel(double screenWidth, int radius) {
-        double equatorLength = 6378140; // in meters
-        double metersPerPixel = equatorLength / 256;
-        int zoomLevel = 1;
-        while ((metersPerPixel * screenWidth) > (2*radius)) {
-            metersPerPixel /= 2;
-            ++zoomLevel;
-        }
-        if((metersPerPixel * screenWidth) < (2*radius)) {
-            zoomLevel--;
-        }
-        Log.i("ADNAN", "zoom level = "+zoomLevel);
-        return zoomLevel;
-    }
+//    public void showToast() {
+//        Toast.makeText(this, "Toast", Toast.LENGTH_SHORT).show();
+//    }
 }

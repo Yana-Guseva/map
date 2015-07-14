@@ -3,6 +3,7 @@ package com.example.yana.mybrowser;
 import android.content.Context;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
@@ -13,11 +14,10 @@ import com.example.yana.mybrowser.util.Util;
 
 
 public class SettingsActivity extends ActionBarActivity {
-    private Button btnSave;
     private SeekBar seekBar;
     private TextView tvRadius;
-    private int step = 500;
-    private int max = 15000;
+    private int step = 1;
+    private int max = 14;
     private int min = Util.minRadius;
     private Context ctx;
 
@@ -26,16 +26,16 @@ public class SettingsActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
 
-        btnSave = (Button) findViewById(R.id.btnSave);
         seekBar = (SeekBar) findViewById(R.id.seekBar);
         tvRadius = (TextView) findViewById(R.id.tvRadius);
 
+        seekBar.setMax(max);
         ctx = this;
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                int value = (int) ((max - min) * ((float) progress * 0.01f * (float) step));
-                tvRadius.setText("" + value);
+                int value = min + (progress * step);
+                tvRadius.setText(" " + value + " ");
                 Util.saveRadius(ctx, value);
             }
 
@@ -49,6 +49,12 @@ public class SettingsActivity extends ActionBarActivity {
 
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        seekBar.setProgress(Util.getRadius(ctx) - 1);
     }
 
     @Override

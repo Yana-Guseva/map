@@ -10,7 +10,7 @@ import org.apache.http.conn.ConnectionPoolTimeoutException;
  */
 public class Util {
 
-    public static int minRadius = 500;
+    public static int minRadius = 1;
 
     public static void saveRadius(Context ctx, int radius) {
         SharedPreferences preferences = ctx.getSharedPreferences("mySharedPreferences", ctx.MODE_PRIVATE);

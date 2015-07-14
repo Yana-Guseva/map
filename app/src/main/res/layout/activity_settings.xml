@@ -23,14 +23,19 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/tvRadius"
-            android:text=""/>
+            android:text=" 1 "/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/km"/>
 
     </LinearLayout>
 
     <SeekBar
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/seekBar"/>
+        android:id="@+id/seekBar" />
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -47,12 +52,7 @@
             android:layout_height="wrap_content"
             android:text="@string/max"
             android:layout_alignParentRight="true"/>
+
     </RelativeLayout>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/btnSave"
-        android:text="@string/save"
-        android:layout_gravity="right" />
 </LinearLayout>
